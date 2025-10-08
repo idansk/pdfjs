@@ -772,5 +772,21 @@ See https://github.com/adobe-type-tools/cmap-resources
 
     </div> <!-- outerContainer -->
     <div id="printContainer"></div>
+      <script>
+  window.addEventListener("message", (event) => {
+    // Optional: validate origin
+    // if (event.origin !== "https://USERNAME.github.io") return;
+
+    const data = event.data;
+    if (data?.type === "navigate" && Number.isFinite(data.page)) {
+      try {
+        PDFViewerApplication.page = Number(data.page);
+      } catch (err) {
+        console.warn("Navigation failed:", err);
+      }
+    }
+  });
+</script>
+
   </body>
 </html>
