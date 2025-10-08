@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>אינדקס שירונים - הקומזיץ שלנו</title>
+    
+
+    <style>
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* prevents double scrollbars */
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  min-height: 100vh;
+  background-color: var(--bg-color);
+}
+/* Make the controls stick to top, and the song list take remaining space */
+.controls {
+  flex-shrink: 0;
+  padding: 10px;
+}
+
+#songs-list {
+  flex-grow: 1;
+  overflow-y: auto; /* scroll only inside the list if it’s long */
+  margin: 0;
+  padding: 0;
+}
+.modal-overlay {
+  position: fixed;
+  inset: 0; /* shorthand for top:0; right:0; bottom:0; left:0 */
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+}
+
+        :root {
+            --bg-color: #f0f8ff;
+            --text-color: #2c3e50;
+            --primary-color: #3498db;
+            --secondary-color: #e67e22;
+            --link-color: var(--primary-color);
+            --link-hover-color: #2980b9;
+            --favorite-color: #f1c40f;
+            --border-color: #bdc3c7;
+        }
+
+        body.dark-mode {
+            --bg-color: #2c3e50;
+            --text-color: #ecf0f1;
+            --primary-color: #3498db;
+            --secondary-color: #f39c12;
+            --link-color: #3498db;
+            --link-hover-color: #2980b9;
+            --border-color: #4a637c;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            text-align: right;
+            direction: rtl;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        h1 {
+            color: var(--secondary-color);
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2.2em;
+            line-height: 1.2;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            direction: rtl;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 10px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 16px;
+            direction: rtl;
+            background-color: inherit;
+            color: var(--text-color);
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s, transform 0.1s;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background-color: var(--link-hover-color);
+            transform: translateY(-1px);
+        }
+
+        #songs-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        #songs-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 10px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: background-color 0.2s;
+        }
+        
+        body.dark-mode #songs-list li {
+            background-color: rgba(0, 0, 0, 0.15);
+        }
+        
+        #songs-list li:hover {
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+        
+        body.dark-mode #songs-list li:hover {
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+
+        .song-details {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            flex-grow: 1;
+        }
+        
+        .song-title-link {
+            font-size: 1.1em;
+            font-weight: bold;
+            text-decoration: none;
+            color: var(--text-color);
+            transition: color 0.2s;
+            cursor: pointer;
+        }
+
+        .song-title-link:hover {
+            color: var(--secondary-color);
+        }
+
+        .song-meta {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        
+        body.dark-mode .song-meta {
+            color: #bdc3c7;
+        }
+
+        .favorite-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 24px;
+            padding: 0 10px;
+            color: var(--border-color);
+            transition: color 0.2s, transform 0.1s;
+        }
+
+        .favorite-btn.is-favorite {
+            color: var(--favorite-color);
+            text-shadow: 0 0 5px rgba(241, 196, 15, 0.5);
+        }
+        
+        .favorite-btn:active {
+            transform: scale(0.9);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .pdf-container {
+            background: white;
+            padding: 5px;
+            border-radius: 8px;
+            width: 98%;
+            height: 98%;
+            max-width: none;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .pdf-container iframe {
+            width: 100%;
+            flex-grow: 1; 
+            border: none;
+            background-color: #ecf0f1;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 5px; 
+            right: 5px;
+            background: var(--secondary-color);
+            color: white;
+            border: 3px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            line-height: 34px;
+            text-align: center;
+            transition: background-color 0.2s;
+            z-index: 1001; 
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            padding: 0;
+        }
+
+        .close-btn.text-mode {
+             width: auto;
+             height: auto;
+             border-radius: 8px;
+             font-size: 16px;
+             padding: 5px 10px;
+             line-height: normal;
+        }
+
+        .close-btn:hover {
+            background: #c0392b;
+        }
+
+        body.dark-mode .pdf-container {
+            background: var(--bg-color);
+        }
+        body.dark-mode .pdf-container iframe {
+            background-color: #34495e;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .controls {
+                flex-direction: column;
+            }
+            input[type="text"], button {
+                width: 100%;
+                box-sizing: border-box;
+            }
+            .pdf-container {
+                width: 100%;
+                height: 100%;
+                border-radius: 0;
+                padding: 0;
+            }
+            .close-btn {
+                top: 10px;
+                right: 10px;
+                width: 35px;
+                height: 35px;
+                font-size: 18px;
+                line-height: 30px;
+            }
+       
+ }
+@media (max-width: 600px) {
+  h1 {
+    font-size: 1.6em;
+  }
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  input[type="text"], button {
+    width: 100%;
+  }
+  #songs-list {
+    font-size: 0.95em;
+  }
+}
+
+    </style>
+</head>
+<body>
+
+    <h1>
+        שירוני הקומזיץ 🎸
+        <span style="font-size: 0.5em; display: block; margin-top: 5px;">כלי הניווט החברתי שלכם</span>
+    </h1>
+    
+    <div class="controls">
+        <input type="text" id="search-input" placeholder="חפש שיר, אמן, או מפתח..." onkeyup="filterSongs()">
+        
+        <button id="favorites-toggle-btn" onclick="toggleFavoritesView()">טוען מועדפים...</button>
+        <button id="shuffle-btn" onclick="shuffleSong()">שיר בהפתעה 🎶</button>
+        <button id="dark-mode-toggle" onclick="toggleDarkMode()">מצב לילה 🌙</button>
+    </div>
+
+    <ul id="songs-list">
+        <li><img src="https://i.gifer.com/ZZ5H.gif" alt="טוען..." style="width: 50px; display: block; margin: 20px auto;"></li>
+    </ul>
+    
+    <div id="status-message" style="text-align: center; margin-top: 20px; color: red;"></div>
+
+    <div id="pdf-modal" class="modal-overlay" onclick="closeModal(event)">
+        <div class="pdf-container">
+            <button class="close-btn text-mode" onclick="closeModal()">חזור לרשימה</button>
+            <div id="pdf-loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.5em; color: #3498db;">
+                טוען PDF... ⏳
+            </div>
+            <iframe id="pdf-iframe" title="צפייה בשירון" style="display: none;"></iframe>
+        </div>
+    </div>
+
+    <script>
+        const PDF_BASE_URL = "https://idansk.github.io/pdfjs/pdfjs/web/viewer.html?file=/pdfjs/pdf/songs.pdf";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzBXc4QSC0j2AGT8vCeNbkwW47YYGpzsM4oMoQCzcL0roFdOnhJHDpRel1C9yES8_YP/exec";
+        const SONG_DATA_URL = "https://docs.google.com/spreadsheets/d/1pY7FJF21xb5NvsZbmoEZlr4mZapYf28ugK3UvqkF1Lo/export?format=csv&gid=0";
+        const VIEWER_ORIGIN = "https://idansk.github.io"; // <= your GitHub Pages domain
+
+
+        let songData = [];
+        let sharedFavorites = [];
+        let currentViewIsFavorites = false;
+        let originalSongMap = {};
+        let isDarkMode = false;
+        let pdfLoaded = false;
+        let currentPage = 1;
+
+        function setStatus(message, isError = false) {
+            const statusElement = document.getElementById('status-message');
+            statusElement.textContent = message;
+            statusElement.style.color = isError ? 'red' : 'green';
+            if (!message) statusElement.textContent = '';
+        }
+
+        async function fetchSongs() {
+            try {
+                setStatus("מנסה לטעון נתונים מהגיליון האלקטרוני...", false);
+                
+                const response = await fetch(SONG_DATA_URL);
+
+                if (!response.ok) {
+                    throw new Error(`שגיאת HTTP: ${response.status}. ודא שהגיליון פתוח לציבור.`);
+                }
+
+                const csvText = await response.text();
+                
+                if (csvText.length < 50) { 
+                    throw new Error("נתוני ה-CSV רקים או לא תקינים.");
+                }
+                
+                const lines = csvText.trim().split('\n').filter(line => line.trim() !== '');
+                
+                if (lines.length <= 1) {
+                    throw new Error("הקובץ רק או מכיל רק כותרות.");
+                }
+
+                const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                
+                const mappedData = lines.slice(1).map(line => {
+                    const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+                    
+                    const title = values[headers.indexOf('Track Name')] || '';
+                    const artist = values[headers.indexOf('Artist Source')] || '';
+                    const pageIdString = values[headers.indexOf('Page/ID')] || '0';
+                    
+                    const page = parseInt(pageIdString, 10);
+                    
+                    return { title, artist, page }; 
+                }).filter(song => song.title && song.artist);
+
+                songData = mappedData;
+                
+                songData.forEach((song, index) => {
+                    const songId = getSongId(song);
+                    originalSongMap[songId] = index;
+                });
+
+                setStatus(`נמצאו ${songData.length} שירים. טוען מועדפים...`);
+                
+                await fetchFavorites();
+                
+            } catch (error) {
+                setStatus(`שגיאה בטעינת השירים: ${error.message}`, true);
+                console.error('Fetch error:', error);
+            }
+        }
+
+        async function fetchFavorites() {
+            try {
+                const response = await fetch(`${SCRIPT_URL}?action=get`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                sharedFavorites = data.favorites || [];
+                document.getElementById('favorites-toggle-btn').textContent = `צפה במועדפים בלבד (${sharedFavorites.length}) ⭐`;
+                renderSongs(songData);
+                setStatus('');
+            } catch (error) {
+                setStatus(`שגיאה בטעינת המועדפים: ${error.message}`, true);
+                renderSongs(songData);
+            }
+        }
+
+        function getSongId(song) {
+            return song.title + '|' + song.artist;
+        }
+        
+        function isFavorite(song) {
+            const songId = getSongId(song);
+            return sharedFavorites.includes(songId);
+        }
+        
+        async function saveFavoriteToServer(song, action) {
+            const songId = getSongId(song);
+            setStatus(action === 'add' ? `מוסיף את "${song.title}" למועדפים...` : `מסיר את "${song.title}" ממועדפים...`);
+            
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: new URLSearchParams({ 
+                        action: action, 
+                        songId: songId 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (action === 'add' && !isFavorite(song)) {
+                        sharedFavorites.push(songId);
+                        setStatus(`השיר "${song.title}" נוסף בהצלחה למועדפים המשותפים.`);
+                    } else if (action === 'remove' && isFavorite(song)) {
+                        sharedFavorites = sharedFavorites.filter(id => id !== songId);
+                        setStatus(`השיר "${song.title}" הוסר בהצלחה מהמועדפים המשותפים.`);
+                    }
+                } else {
+                    setStatus(`שגיאה: ${data.message}`, true);
+                }
+                
+                renderSongs(currentViewIsFavorites ? songData.filter(isFavorite) : songData);
+                
+            } catch (error) {
+                setStatus(`שגיאת תקשורת עם השרת: ${error.message}`, true);
+            }
+        }
+        
+        function toggleFavorite(songIndex) {
+            const song = songData[songIndex];
+            const action = isFavorite(song) ? 'remove' : 'add';
+            saveFavoriteToServer(song, action);
+        }
+
+        function toggleFavoritesView() {
+            currentViewIsFavorites = !currentViewIsFavorites;
+            const btn = document.getElementById('favorites-toggle-btn');
+            const list = currentViewIsFavorites ? songData.filter(isFavorite) : songData;
+            
+            if (currentViewIsFavorites) {
+                btn.textContent = `צפה בכל השירים (${songData.length}) 📚`;
+            } else {
+                btn.textContent = `צפה במועדפים בלבד (${sharedFavorites.length}) ⭐`;
+            }
+          
+            filterSongs(list);
+          
+            if (currentViewIsFavorites && list.length === 0) {
+                setStatus('אין לך עדיין שירים במועדפים. סמן כוכב ליד שיר כדי להוסיף אותו!', false);
+            } else {
+                setStatus('');
+            }
+        }
+
+        function renderSongs(songsToRender) {
+            const listElement = document.getElementById('songs-list');
+            listElement.innerHTML = '';
+          
+            if (songsToRender.length === 0) {
+                const emptyMsg = document.createElement('li');
+                emptyMsg.style.justifyContent = 'center';
+                emptyMsg.style.backgroundColor = 'transparent';
+                emptyMsg.innerHTML = '<h2>לא נמצאו שירים תואמים 😞</h2>';
+                listElement.appendChild(emptyMsg);
+                return;
+            }
+
+            songsToRender.forEach(song => {
+                const li = document.createElement('li');
+                const songId = getSongId(song);
+                const originalIndex = originalSongMap[songId]; 
+              
+                const isFav = isFavorite(song);
+              
+                li.innerHTML = `
+                    <div class="song-details">
+                        <a href="#" onclick="event.preventDefault(); openModal(${song.page})" class="song-title-link">
+                            ${song.title}
+                        </a>
+                        <span class="song-meta">${song.artist} | עמוד ${song.page}</span>
+                    </div>
+                    <button class="favorite-btn ${isFav ? 'is-favorite' : ''}" 
+                        onclick="toggleFavorite(${originalIndex})" 
+                        aria-label="${isFav ? 'הסר ממועדפים' : 'הוסף למועדפים'}">
+                        ★
+                    </button>
+                `;
+                listElement.appendChild(li);
+            });
+          
+            const favBtn = document.getElementById('favorites-toggle-btn');
+            if (currentViewIsFavorites) {
+                favBtn.textContent = `צפה בכל השירים (${songData.length}) 📚`;
+            } else {
+                favBtn.textContent = `צפה במועדפים בלבד (${sharedFavorites.length}) ⭐`;
+            }
+        }
+
+        function filterSongs(listParam = songData) {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const listToFilter = currentViewIsFavorites ? listParam.filter(isFavorite) : listParam;
+          
+            const filteredSongs = listToFilter.filter(song => {
+                return song.title.toLowerCase().includes(searchTerm) ||
+                       song.artist.toLowerCase().includes(searchTerm);
+            });
+          
+            renderSongs(filteredSongs);
+        }
+
+        function shuffleSong() {
+            if (songData.length === 0) {
+                setStatus('אין שירים ברשימה לערבב.', true);
+                return;
+            }
+          
+            const listToShuffle = currentViewIsFavorites ? songData.filter(isFavorite) : songData;
+          
+            if (listToShuffle.length === 0) {
+                setStatus('אין שירים בתצוגה הנוכחית לערבב.', true);
+                return;
+            }
+          
+            const randomIndex = Math.floor(Math.random() * listToShuffle.length);
+            const randomSong = listToShuffle[randomIndex];
+          
+            setStatus(`השיר שנבחר: ${randomSong.title} - ${randomSong.artist}!`, false);
+            openModal(randomSong.page);
+        }
+
+function openModal(pageNumber) {
+  const modal = document.getElementById("pdf-modal");
+  const iframe = document.getElementById("pdf-iframe");
+  const loadingDiv = document.getElementById("pdf-loading");
+
+  modal.style.display = "flex";
+  document.body.style.overflow = "hidden";
+
+  const viewerUrl = `${PDF_BASE_URL}#page=${pageNumber}`;
+
+  // First load — embed the viewer
+  if (!pdfLoaded) {
+    loadingDiv.style.display = "block";
+    iframe.style.display = "none";
+
+    iframe.src = viewerUrl;
+
+    iframe.onload = () => {
+      pdfLoaded = true;
+      currentPage = pageNumber;
+      loadingDiv.style.display = "none";
+      iframe.style.display = "block";
+    };
+
+    // Fallback if onload never fires
+    setTimeout(() => {
+      if (!pdfLoaded) {
+        pdfLoaded = true;
+        loadingDiv.style.display = "none";
+        iframe.style.display = "block";
+      }
+    }, 4000);
+    return;
+  }
+
+  // Already loaded — try fast page navigation
+  try {
+    iframe.contentWindow.postMessage({ type: "navigate", page: pageNumber }, VIEWER_ORIGIN);
+    currentPage = pageNumber;
+  } catch (err) {
+    // If postMessage fails, reload with new page hash
+    iframe.src = viewerUrl;
+    currentPage = pageNumber;
+  }
+}
+        function closeModal(event) {
+            if (!event || event.target.id === 'pdf-modal' || event.target.classList.contains('close-btn')) {
+                const modal = document.getElementById('pdf-modal');
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+                // לא מאפסים את ה-src - שומרים את ה-PDF טעון!
+            }
+        }
+
+        function toggleDarkMode() {
+            isDarkMode = document.body.classList.toggle('dark-mode');
+            document.getElementById('dark-mode-toggle').textContent = isDarkMode ? 'מצב יום ☀️' : 'מצב לילה 🌙';
+        }
+
+        function loadInitialState() {
+            document.getElementById('dark-mode-toggle').textContent = 'מצב לילה 🌙';
+            fetchSongs();
+        }
+
+        loadInitialState();
+
+    </script>
+</body>
+</html>
